@@ -1,4 +1,6 @@
 import os
+import logging
+import json
 from langchain.chains import ConversationalRetrievalChain
 from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
@@ -8,11 +10,8 @@ from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
 from langchain_community.embeddings import SentenceTransformerEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pushbullet import Pushbullet
-import logging
-
 
 class RecommendationEngine:
-
     def __init__(self, openai_api_key, pushbullet_api_key, gps_lat=None, gps_long=None):
         self.docs_dir = "./handbook/"
         self.persist_dir = "./handbook_faiss/"
@@ -35,7 +34,7 @@ class RecommendationEngine:
 
     def __initialize_qa_chain(self):
         general_system_template = r"""
-        You are spirulina AI controller agent.
+        You are a spirulina AI controller agent.
         You will receive input in JSON format with parameters such as "temperature", "conductivity", "brightness", etc.
         You will generate a JSON output with recommended actions and status analysis.
         Format example:
@@ -87,64 +86,19 @@ class RecommendationEngine:
         self.vectorstore.save_local(self.persist_dir)
         logging.info(f"Saved FAISS index to {self.persist_dir}")
 
-    def generate_recommendation(self, data):
-        result = self.qa_chain.invoke({"question": data})
-        generated_response = result["answer"]
-        logging.info("Recommendations: " + generated_response)
-        return generated_response
+    def generate_recommendation(self, data_json):
+        """
+        Cette méthode génère des recommandations en utilisant les données JSON des capteurs.
+        """
+        try:
+            # Convertir les données JSON en chaîne pour le modèle
+            result = self.qa_chain.invoke({"question": data_json})
+            generated_response = result["answer"]
+            logging.info("Recommendations: " + generated_response)
+            return generated_response
+        except Exception as e:
+            logging.error(f"Error generating recommendation: {e}")
+            return None
 
     def notify(self, title, notes):
         self.pb.push_note(title, notes)
-
-
-
-
-
-# import os
-# import logging
-# import torch
-# from transformers import GPT2Tokenizer, GPT2LMHeadModel
-# from PyPDF2 import PdfReader  # Pour lire le fichier PDF
-# from pushbullet import Pushbullet
-
-# class RecommendationEngine:
-
-#     def __init__(self, pushbullet_api_key, gps_lat, gps_long):
-#         self.gps_lat = gps_lat
-#         self.gps_long = gps_long
-#         self.API_KEY = pushbullet_api_key
-#         self.pb = Pushbullet(self.API_KEY)
-
-#         # Charger TinyGPT
-#         self.model_name = "gpt2"  # Vous pouvez choisir un autre modèle GPT léger
-#         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#         self.model = GPT2LMHeadModel.from_pretrained(self.model_name).to(self.device)
-#         self.tokenizer = GPT2Tokenizer.from_pretrained(self.model_name)
-    
-#     def load_document(self, file_path):
-#         """
-#         Charge un document PDF et retourne son texte sous forme de chaîne.
-#         """
-#         reader = PdfReader(file_path)
-#         text = ""
-#         for page in reader.pages:
-#             text += page.extract_text()
-#         logging.info(f"Texte du document chargé ({len(text)} caractères)")
-#         return text
-    
-#     def generate_recommendation(self, data, document_text):
-#         # Préparer les données des capteurs et le texte du document sous forme de texte
-#         input_text = f"Données des capteurs : {data}\n\nDocument : {document_text}\n\nQue recommandez-vous ?"
-        
-#         # Tokeniser et générer du texte
-#         inputs = self.tokenizer(input_text, return_tensors="pt").to(self.device)
-#         outputs = self.model.generate(inputs['input_ids'], max_length=150, num_return_sequences=1)
-
-#         # Convertir les résultats générés en texte
-#         generated_response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-#         logging.info("Recommandations générées: " + generated_response)
-#         return generated_response
-
-#     def notify(self, title, notes):
-#         self.pb.push_note(title, notes)
-
