@@ -1,5 +1,6 @@
 import time
 import RPi.GPIO as GPIO
+import json
 
 class DataHandler:
     def __init__(self):
@@ -18,8 +19,8 @@ class DataHandler:
 
     def collect_sensor_data(self):
         """
-        Cette fonction collecte les données de plusieurs capteurs connectés via GPIO
-        et retourne les valeurs sous forme d'un dictionnaire.
+        Cette fonction collecte les données de plusieurs capteurs connectés via GPIO,
+        les formate en JSON, puis retourne le JSON sous forme de chaîne de caractères.
         """
         try:
             # Collecte des données depuis les capteurs
@@ -35,10 +36,14 @@ class DataHandler:
                 'EC': ec_value,
                 'brightness': light_value
             }
+
+            # Convertir le dictionnaire en JSON
+            sensor_data_json = json.dumps(sensor_data)
             
-            print("Données collectées : ", sensor_data)
-            return sensor_data
+            print("Données collectées et converties en JSON : ", sensor_data_json)
+            return sensor_data_json
         
         except Exception as e:
             print(f"Erreur lors de la collecte des données : {e}")
             return None
+
